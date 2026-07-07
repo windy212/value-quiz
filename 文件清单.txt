@@ -1,0 +1,4 @@
+vercel.json
+requirements.txt
+index.html
+api/index.py

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台登录</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei",sans-serif;background:#f0f2f5;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.box{background:white;border-radius:12px;padding:40px;box-shadow:0 2px 12px rgba(0,0,0,0.15);width:360px;text-align:center}
+.box h2{color:#1a73e8;margin-bottom:8px}
+.box .sub{color:#999;font-size:13px;margin-bottom:25px}
+.box input{width:100%;padding:12px 16px;border:1px solid #d9d9d9;border-radius:8px;font-size:15px;margin-bottom:15px}
+.box input:focus{border-color:#1a73e8;outline:none}
+.box button{width:100%;padding:12px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+.box button:hover{background:#1557b0}
+.err{color:#d93025;margin-bottom:15px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>价值测评后台</h2>
+  <p class="sub">请输入密码查看数据</p>
+  <p class="err" id="err" style="display:none"></p>
+  <input type="password" id="pwd" placeholder="后台密码" autofocus>
+  <button onclick="login()">登 录</button>
+</div>
+<script>
+function login(){
+  var p=document.getElementById('pwd').value;
+  if(!p){return;}
+  var f=new FormData();f.append('password',p);
+  fetch('/api/admin',{method:'POST',body:f}).then(r=>r.json()).then(d=>{
+    if(d.error){document.getElementById('err').style.display='block';document.getElementById('err').textContent=d.error;return;}
+    sessionStorage.setItem('pwd',p);
+    sessionStorage.setItem('data',JSON.stringify(d));
+    location.href='/admin.html';
+  }).catch(()=>{document.getElementById('err').style.display='block';document.getElementById('err').textContent='网络错误';});
+}
+document.getElementById('pwd').addEventListener('keydown',function(e){if(e.key==='Enter')login();});
+</script>
+</body>
+</html>

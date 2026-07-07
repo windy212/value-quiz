@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>九型性格自我测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; }
+.header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; text-align: center; padding: 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.header h1 { font-size: 22px; margin-bottom: 8px; }
+.timer-box { display: inline-flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; font-size: 18px; font-weight: bold; }
+.timer-box.warning { background: rgba(255,0,0,0.6); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.6; } }
+.container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+.name-box { background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.name-box label { font-weight: bold; margin-right: 10px; }
+.name-box input { padding: 8px 15px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 15px; width: 200px; }
+.question-group { background: white; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+.group-title { background: #e8f0fe; padding: 12px 20px; font-weight: bold; color: #1a73e8; font-size: 15px; border-bottom: 1px solid #d2e3fc; }
+.question { padding: 12px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.question:last-child { border-bottom: none; }
+.q-num { min-width: 30px; height: 30px; background: #f0f2f5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: #666; flex-shrink: 0; margin-top: 2px; }
+.q-text { flex: 1; font-size: 14px; line-height: 1.6; min-width: 200px; }
+.options { display: flex; gap: 8px; margin-top: 6px; flex-shrink: 0; width: 100%; }
+.options label { display: flex; align-items: center; gap: 4px; padding: 6px 14px; border: 1px solid #d9d9d9; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; flex: 1; justify-content: center; }
+.options label:hover { border-color: #1a73e8; background: #e8f0fe; }
+.options input[type="radio"] { display: none; }
+.options input[type="radio"]:checked + span { color: #1a73e8; font-weight: bold; }
+.options label:has(input:checked) { border-color: #1a73e8; background: #e8f0fe; }
+.legend { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-size: 13px; color: #666; }
+.legend b { color: #1a73e8; }
+.submit-box { text-align: center; margin: 30px 0; }
+.submit-btn { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; border: none; padding: 14px 50px; font-size: 18px; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(26,115,232,0.4); transition: transform 0.2s; }
+.submit-btn:hover { transform: translateY(-2px); }
+.submit-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+.success-msg { display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.success-msg .icon { font-size: 60px; margin-bottom: 15px; }
+.success-msg h2 { color: #1a73e8; margin-bottom: 10px; }
+.success-msg p { color: #666; font-size: 15px; }
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: #1a73e8; z-index: 200; transition: width 0.3s; }
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<div class="header">
+  <h1>九型性格自我测试</h1>
+  <div class="timer-box" id="timerBox">⏱ 剩余时间：<span id="timer">03:00</span></div>
+</div>
+<div class="container" id="quizArea">
+  <div class="name-box">
+    <label>您的姓名：</label>
+    <input type="text" id="userName" placeholder="请输入姓名" maxlength="20">
+  </div>
+  <div class="legend">
+    评分标准：<b>A = 非常赞同（2分）</b>、<b>B = 赞同（1分）</b>、<b>C = 不大赞同（0分）</b><br>
+    共99题，每8题一组汇总分数。请在3分钟内完成作答。
+  </div>
+  <div id="questionsContainer"></div>
+  <div class="submit-box">
+    <button class="submit-btn" id="submitBtn" onclick="submitQuiz()">提交问卷</button>
+  </div>
+</div>
+<div class="success-msg" id="successMsg">
+  <div class="icon">✅</div>
+  <h2>提交成功！</h2>
+  <p>感谢您的参与，您的作答已记录。</p>
+</div>
+<script>
+const questions = [
+  "在做我自己的工作时，我做到接近\u201c完美\u201d，所以我也期望别人可以做到这个地步。",
+  "我想我的伴侣或那些我认为重要的人，该不用我讲出口也知道我的需要。",
+  "我是一个很有能力、有效率及有成就的人；至少我想别人这样看我。",
+  "我会为一些不平凡、强烈及戏剧化的情况而兴奋，我对于平凡及普通的事物没有兴趣。",
+  "我会抓紧时间收集各种信息数据。",
+  "我很少做重大决定。",
+  "大多数人太认真了，放松些就会开朗起来。",
+  "我相信想要什么就该挺身争取。",
+  "在别人眼中，我很轻松，可以用\u201c随和\u201d来形容。",
+  "完美的事物出现小瑕疵，令我无法忍受。",
+  "事情在我眼中非黑即白，没有灰色地带。",
+  "那些我认为重要的人觉得我善解人意及讨人喜欢是十分重要的。",
+  "我懂得如何\u201c推销自己\u201d。",
+  "虽然过去的日子有点苦涩，但我依然爱缅怀过去。",
+  "对于要主动向人求助，我觉得很不自在。",
+  "我比其他人能更快觉察出潜在的风险和危机。",
+  "我希望其他人也和我一样，可以轻松一点，快乐一点。",
+  "伤害我的人不必对他客气，或许我还要教训他。",
+  "人生大部分的事，若您十年后再看此事，已经变得没什么值得难过。",
+  "对我来讲，觉得自己在伴侣心中是重要及被需要是十分重要的。",
+  "我十分重视\u201c责任\u201d，我比别人更加努力。",
+  "我是一个快乐及付出的人，但若有人触怒我，我也会大发雷霆。",
+  "我希望了解自己的定位，以及别人对我有什么要求。",
+  "当我不开心的时候，我喜欢独自一个人来处理这种不开心的情绪。",
+  "对于那些无聊的谈话，我觉得十分沉闷，我会情愿独处。",
+  "在行动之前，我希望列出所有可能遇到的麻烦状况。",
+  "当知道眼前工作的困难快要解决时，我便开始寻找新的目标去计划。",
+  "我不相信自己有温柔的一面，我谁都不怕，要挑战吗？没问题。",
+  "我不觉得自己有怎样的重要，我很普通。",
+  "我是成功的。",
+  "很少能有足够的时间，允许我完成所有我必须做的事。",
+  "别人觉得我是很和善及体谅别人的人。",
+  "我对穿着还是很讲究，搭配，色调，款式等我都很介意，人的形象很重要，我愿意别人视我为成功者。",
+  "我的个人风格对我来说是十分重要。",
+  "我比较喜欢做旁观者，我不太喜欢与人交往。",
+  "我害怕做出错误的决定。",
+  "若少许已经是好，那么多些便更好。",
+  "我觉得人有时是自制烦恼。",
+  "我不喜欢那些争先的人，我认为那是出风头，枪打出头鸟的。",
+  "我时常渴望得到那些我不能得到的事物。",
+  "我是个不错的评论家，因为我总是能看出什么问题不对及事情出错的地方。",
+  "我感情上是冲动的，情绪起伏变化极端。",
+  "有时我的成就把我个人的其他方面完全遮掩。",
+  "我周围发生的事深深影响我的情绪及对工作的兴趣。",
+  "我喜欢自己呆在一间大大的书房里看书，收集各种各样的资料信息，为的是要弄个明白。",
+  "有时面对危险的最好方法是强烈的反抗，但是我知道内心是有些恐惧的。",
+  "我对于别人、可能性、未来都很热心并十分积极。",
+  "当被人攻击时，我不惜任何方法和代价令对方退缩。",
+  "我通常走一条最少抗拒的路线。",
+  "我是旁观者的机会多，一般不会是当事人。",
+  "通常我都会注意过程与细节，因为，只有每个步骤都作对了，结果才会正确。",
+  "我期望我的爱人能明白其实我很需要他的爱。",
+  "我做事讲求快捷妥当，不喜欢拖拖拉拉。",
+  "有些人说我情绪化，其实没有人能真正明白我内心的真实感受。",
+  "我认为解决问题最好的方法就是静下心来，仔细思考。",
+  "在做出决定前，我会在未来潜在可能的危险方面做足功夫，但始终有时仍很难做出决定。",
+  "大部份时间我会避开那些严重的问题。",
+  "我不会容许自己觉得身处困境。",
+  "我较弱于聆听及专注。",
+  "我老是改变主义，犹豫不决经常影响我的成就。",
+  "当我找到别人错误时，他们会很不自在，但我的出发点是有建设性的。",
+  "我经常扮演付出同情、提出忠告和建议的角色。",
+  "有一班\u201c合适\u201d、\u201c有用\u201d的朋友，对我的工作很重要。",
+  "我希望把事情做得漂亮，有格调，我讨厌没有品位的东西。",
+  "我需要许多时间独处，利用这些时间去想一些自己有兴趣的事物及方案。",
+  "我喜欢与我相似的人在一起。",
+  "我偏好内容轻松愉快的话题，不爱讨论内容沉闷和严肃的事。",
+  "只要我不满意就会说出来，但不会记恨。",
+  "我不喜欢争执及冲动，遇到争执我无法调节时，我会选择离开这种争执的场面。",
+  "我认为未来有许多美好的事等着我们。",
+  "我清晰什么是应该做的，什么是不应该做的。",
+  "别人遇到困难，自然而然我会伸出援手，但大部分时间，别人并不珍视我。",
+  "别人或许形容我为一个工作狂。",
+  "我的感觉是重要的，我经常会跟着自己的感觉走。",
+  "若可以的话我会避免社交应酬。",
+  "我很少能做出重大决定。",
+  "通常一件事未完成，其他事情已充塞了我的时间。",
+  "我是个冲劲十足的人，\u201c不怕阻力\u201d是很好的形容。",
+  "世上没有任何事急到不可以推至明天。",
+  "我说话直截了当，有时人们觉得我很\u201c强硬\u201d。",
+  "共同的行为准则能避免人与人之间不必要的混乱，我们应不惜代价去坚持这种准则。",
+  "我特别有兴趣照顾孩子或那些很有成就但又无暇照顾自己的人。",
+  "我喜欢掌声、好的评价及他人的认同，我发现自己常忽略内心世界。",
+  "我喜欢和我的伴侣保持一定的距离，因为一旦双方越密切就越能发现对方的缺陷。",
+  "我觉得很难表达出内心的感受。",
+  "我做事极端，不是一拖再拖，就是向前直冲。",
+  "我讨厌无聊，喜欢尽可能忙碌，每天的活动都排得满满的。",
+  "规则由我定，若不跟从，您可以离开。",
+  "我不喜欢命令别人，但当别人命令我时，我很反感和变得倔强。",
+  "我很随和，特别容易与人相处。",
+  "我常评估及判断自己及别人的行为。",
+  "我会很自然的感受到别人的需求与感受。",
+  "当回顾过去时，我会重温过去的成就而不去追悔过去的错误。",
+  "我不被他人理解对我来讲是一件特别痛苦的事。",
+  "我善于分析与思考，通常很多复杂的问题交织在一起，我都能找出之间的逻辑关系。",
+  "我会常常提防别人陷害和利用，所以常和别人保持一定的安全距离。因此，别人也觉得我不容易亲近。",
+  "我不喜欢与贫穷、依赖和消极的人做朋友。",
+  "对于许多我很注重自己的主意来行事，我很难服从别人的指挥。",
+  "为何在可以坐下时要起立？为何在可以躺下时要坐正？"
+];
+const container = document.getElementById('questionsContainer');
+let html = '';
+for (let i = 0; i < questions.length; i++) {
+  const gn = Math.floor(i / 8) + 1;
+  if (i % 8 === 0) html += '<div class="question-group"><div class="group-title">第' + gn + '组（第' + (i+1) + '-' + Math.min(i+8,99) + '题）</div>';
+  html += '<div class="question"><div class="q-num">' + (i+1) + '</div><div class="q-text">' + questions[i] + '</div><div class="options"><label><input type="radio" name="q' + (i+1) + '" value="2"><span>A 非常赞同</span></label><label><input type="radio" name="q' + (i+1) + '" value="1"><span>B 赞同</span></label><label><input type="radio" name="q' + (i+1) + '" value="0"><span>C 不大赞同</span></label></div></div>';
+  if (i % 8 === 7 || i === 98) html += '</div>';
+}
+container.innerHTML = html;
+let totalSeconds = 180;
+const timerEl = document.getElementById('timer');
+const timerBox = document.getElementById('timerBox');
+const progressBar = document.getElementById('progressBar');
+setInterval(function() {
+  totalSeconds--;
+  var m = Math.floor(totalSeconds / 60), s = totalSeconds % 60;
+  timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  progressBar.style.width = ((180 - totalSeconds) / 180 * 100) + '%';
+  if (totalSeconds <= 30) timerBox.classList.add('warning');
+  if (totalSeconds <= 0) { clearInterval(this); alert('时间到！系统将自动提交。'); doSubmit(); }
+}, 1000);
+function submitQuiz() {
+  if (!document.getElementById('userName').value.trim()) { alert('请先输入姓名'); return; }
+  doSubmit();
+}
+function doSubmit() {
+  document.getElementById('submitBtn').disabled = true;
+  var a = {}, u = [];
+  for (var i = 1; i <= 99; i++) { var c = document.querySelector('input[name="q'+i+'"]:checked'); if (c) a[i] = c.value; else u.push(i); }
+  if (u.length > 0 && totalSeconds > 0) { if (!confirm('还有'+u.length+'题未作答，确定提交？')) { document.getElementById('submitBtn').disabled = false; return; } }
+  fetch('/api/submit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name: document.getElementById('userName').value.trim()||'\u533f\u540d', answers: a}) })
+  .then(r => r.json()).then(d => { if (d.success) { document.getElementById('quizArea').style.display='none'; document.getElementById('successMsg').style.display='block'; window.scrollTo(0,0); } else { alert('提交失败'); document.getElementById('submitBtn').disabled=false; } })
+  .catch(() => { alert('网络错误'); document.getElementById('submitBtn').disabled=false; });
+}
+</script>
+</body>
+</html>

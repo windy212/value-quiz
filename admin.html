@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台管理</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei",sans-serif;background:#f0f2f5}
+.topbar{background:#1a73e8;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.topbar h1{font-size:18px}
+.btns{display:flex;gap:10px}
+.btns a,.btns button{padding:8px 18px;border-radius:6px;text-decoration:none;font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:white}
+.btns a:hover,.btns button:hover{background:rgba(255,255,255,0.3)}
+.export{background:#2e7d32!important;border-color:#2e7d32!important}
+.stats{display:flex;gap:15px;padding:20px 24px;flex-wrap:wrap}
+.card{background:white;border-radius:10px;padding:18px 24px;flex:1;min-width:140px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.card .n{font-size:32px;font-weight:bold;color:#1a73e8}
+.card .l{font-size:13px;color:#999;margin-top:4px}
+.tw{padding:0 24px 24px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+th{background:#e8f0fe;color:#1a73e8;padding:10px 8px;font-size:12px;white-space:nowrap;border-bottom:2px solid #d2e3fc}
+td{padding:8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:center;white-space:nowrap}
+tr:hover{background:#f8f9fa}
+.nm{text-align:left!important;font-weight:bold}
+.tc{color:#d93025;font-weight:bold;font-size:15px}
+.empty{text-align:center;padding:60px;color:#999}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>价值测评 - 后台管理</h1>
+  <div class="btns">
+    <a id="exportBtn" class="export" href="#">导出 Excel</a>
+    <button onclick="loadData()">刷新</button>
+  </div>
+</div>
+<div class="stats" id="stats"></div>
+<div class="tw" id="table"></div>
+<script>
+var pwd=sessionStorage.getItem('pwd');
+if(!pwd)location.href='/admin_login.html';
+function loadData(){
+  var f=new FormData();f.append('password',pwd);
+  fetch('/api/admin',{method:'POST',body:f}).then(r=>r.json()).then(d=>{
+    if(d.error){alert(d.error);location.href='/admin_login.html';return;}
+    render(d.responses);
+    document.getElementById('exportBtn').href='/api/export?password='+encodeURIComponent(pwd);
+  }).catch(()=>{alert('网络错误');});
+}
+function render(list){
+  var h='<div class="card"><div class="n">'+list.length+'</div><div class="l">参与人数</div></div>';
+  if(list.length>0){
+    var sum=0,max=-1,min=999;
+    list.forEach(r=>{sum+=r.total_score;if(r.total_score>max)max=r.total_score;if(r.total_score<min)min=r.total_score;});
+    h+='<div class="card"><div class="n">'+(sum/list.length).toFixed(1)+'</div><div class="l">平均分</div></div>';
+    h+='<div class="card"><div class="n">'+max+'</div><div class="l">最高分</div></div>';
+    h+='<div class="card"><div class="n">'+min+'</div><div class="l">最低分</div></div>';
+  }
+  document.getElementById('stats').innerHTML=h;
+  if(list.length===0){document.getElementById('table').innerHTML='<div class="empty">暂无数据</div>';return;}
+  var t='<table><thead><tr><th>#</th><th>姓名</th><th>时间</th>';
+  for(var g=1;g<=13;g++)t+='<th>'+g+'组</th>';
+  t+='<th>总分</th></tr></thead><tbody>';
+  list.forEach(function(r,i){
+    t+='<tr><td>'+(i+1)+'</td><td class="nm">'+r.name+'</td><td>'+r.timestamp+'</td>';
+    r.groups.forEach(function(s){t+='<td>'+s+'</td>';});
+    t+='<td class="tc">'+r.total_score+'</td></tr>';
+  });
+  t+='</tbody></table>';
+  document.getElementById('table').innerHTML=t;
+}
+loadData();
+</script>
+</body>
+</html>
