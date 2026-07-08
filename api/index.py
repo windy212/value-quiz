@@ -6,10 +6,23 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 app = Flask(__name__)
 
-DATA = []
+DATA_FILE = '/tmp/responses.json'
 ADMIN_PASSWORD = os.environ.get('ADMIN_PWD', 'admin123')
 
-@app.route('/api/submit', methods=['POST'])
+def _load():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def _save(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, ensure_ascii=False)
+
+@app.route('/submit', methods=['POST'])
 def submit():
     data = request.get_json()
     if not data or 'answers' not in data:
@@ -28,22 +41,25 @@ def submit():
         'groups': groups,
         'total_score': sum(groups)
     }
-    DATA.append(record)
+    all_data = _load()
+    all_data.append(record)
+    _save(all_data)
     return jsonify({'success': True})
 
-@app.route('/api/admin', methods=['POST'])
+@app.route('/admin', methods=['POST'])
 def admin():
     password = request.form.get('password') or request.args.get('password')
     if password != ADMIN_PASSWORD:
         return jsonify({'error': 'wrong password'}), 401
-    return jsonify({'responses': DATA, 'count': len(DATA)})
+    return jsonify({'responses': _load(), 'count': _load().__len__()})
 
-@app.route('/api/export')
+@app.route('/export')
 def export():
     password = request.args.get('password')
     if password != ADMIN_PASSWORD:
         return 'Unauthorized', 401
-    if not DATA:
+    all_data = _load()
+    if not all_data:
         return 'no data', 200
     wb = Workbook()
     ws = wb.active
@@ -62,7 +78,7 @@ def export():
     for col in range(4, 18):
         ws.column_dimensions[chr(64 + col)].width = 8
     ws.column_dimensions['Q'].width = 8
-    for idx, resp in enumerate(DATA, 1):
+    for idx, resp in enumerate(all_data, 1):
         row = idx + 1
         ws.cell(row=row, column=1, value=idx).border = b
         ws.cell(row=row, column=2, value=resp.get('name', 'N/A')).border = b
@@ -77,6 +93,3 @@ def export():
     wb.save(buf)
     buf.seek(0)
     return send_file(buf, as_attachment=True, download_name='export.xlsx')
-
-if __name__ == '__main__':
-    app.run()
